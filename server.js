@@ -9,7 +9,7 @@ server.get("/", (req, res) => {
   res.json("It's working!");
 });
 
-server.get("/api/users", (req, res) => {
+server.get("/api/users", restricted, (req, res) => {
   Users.find()
     .then(users => {
       res.status(200).json(users);
@@ -57,5 +57,21 @@ server.post("/api/login", (req, res) => {
       });
     });
 });
+
+function restricted(req, res, next) {
+  const { username, password } = req.headers;
+  Users.findBy({ username })
+    .first()
+    .then(user => {
+      if (user && bcrypt.compareSync(password, user.password)) {
+        next();
+      } else {
+        res.status(401).json({ message: "You shall not pass!" });
+      }
+    })
+    .catch(err => {
+      res.status(500).json({ message: err.message });
+    });
+}
 
 module.exports = server;
