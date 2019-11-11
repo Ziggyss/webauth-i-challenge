@@ -9,6 +9,18 @@ server.get("/", (req, res) => {
   res.json("It's working!");
 });
 
+server.get("/api/users", (req, res) => {
+  Users.find()
+    .then(users => {
+      res.status(200).json(users);
+    })
+    .catch(err => {
+      res.status(500).json({
+        message: "Could not retrieve users: " + err.message
+      });
+    });
+});
+
 server.post("/api/register", (req, res) => {
   const { username, password } = req.body;
   const hash = bcrypt.hashSync(password, 11);
