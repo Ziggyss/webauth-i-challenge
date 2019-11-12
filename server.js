@@ -32,9 +32,9 @@ server.use(express.json());
 server.use(cors());
 server.use(session(sessionConfig));
 
-server.get("/", (req, res) => {
-  res.json("It's working!");
-});
+// server.get("/", (req, res) => {
+//   res.json("It's working!!");
+// });
 
 server.get("/api/users", restricted, (req, res) => {
   Users.find()
