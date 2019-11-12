@@ -8,7 +8,29 @@ const KnexSessionStore = require("connect-session-knex")(session);
 const server = express();
 const Users = require("./users/user-model");
 
+const sessionConfig = {
+  name: "amazingCookieName",
+  secret: "this is the bit I am supposed to put into .env",
+  cookie: {
+    maxAge: 1000 * 60 * 45,
+    secure: false,
+    httpOnly: false
+  },
+  resave: false,
+  saveUninitialized: false,
+  store: new KnexSessionStore({
+    knex: require('./database/db-config'),
+    tablename: "sessions",
+    sidfieldname: "sid",
+    createtable: true,
+    clearInterval: 1000 * 60 * 45
+  })
+}
+
+server.use(helmet());
 server.use(express.json());
+server.use(cors());
+server.use(session(sessionConfig));
 
 server.get("/", (req, res) => {
   res.json("It's working!");
@@ -51,9 +73,10 @@ server.post("/api/login", (req, res) => {
     .first()
     .then(user => {
       if (user && bcrypt.compareSync(password, user.password)) {
+        req.session.user = user;
         res.status(200).json({ message: `Welcome ${user.username}!` });
       } else {
-        res.status(401).json({ message: "Invalid credentials: " });
+        res.status(401).json({ message: "Invalid credentials" });
       }
     })
     .catch(error => {
@@ -67,8 +90,8 @@ function restricted(req, res, next) {
   if (req.session && req.session.user) {
     next();
   } else {
-    res.status(400).json({ message: 'You shall not pass!' });
+    res.status(400).json({ message: "You shall not pass!" });
   }
-};
+}
 
 module.exports = server;
