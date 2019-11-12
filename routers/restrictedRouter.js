@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", restricted, (req, res) => {
+router.get("/*", restricted, (req, res) => {
   res.send("Restricted path working");
 });
 
