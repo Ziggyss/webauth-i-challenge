@@ -86,6 +86,20 @@ server.post("/api/login", (req, res) => {
     });
 });
 
+server.get('/api/logout', (req, res) => {
+  if (req.session) {
+    req.session.destroy(err => {
+      if (err) {
+        res.json('Nope, you cannot log out...')
+      } else {
+        res.json('Goodbye, see you next time!')
+      }
+    })
+  } else {
+    res.end();
+  }
+})
+
 function restricted(req, res, next) {
   if (req.session && req.session.user) {
     next();
