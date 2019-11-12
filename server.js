@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
+const RestrictedRouter = require("./routers/restrictedRouter");
 
 const server = express();
 const Users = require("./users/user-model");
@@ -19,22 +20,19 @@ const sessionConfig = {
   resave: false,
   saveUninitialized: false,
   store: new KnexSessionStore({
-    knex: require('./database/db-config'),
+    knex: require("./database/db-config"),
     tablename: "sessions",
     sidfieldname: "sid",
     createtable: true,
     clearInterval: 1000 * 60 * 45
   })
-}
+};
 
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
 server.use(session(sessionConfig));
-
-// server.get("/", (req, res) => {
-//   res.json("It's working!!");
-// });
+server.use("/api/restricted", RestrictedRouter);
 
 server.get("/api/users", restricted, (req, res) => {
   Users.find()
@@ -86,19 +84,19 @@ server.post("/api/login", (req, res) => {
     });
 });
 
-server.get('/api/logout', (req, res) => {
+server.get("/api/logout", (req, res) => {
   if (req.session) {
     req.session.destroy(err => {
       if (err) {
-        res.json('Nope, you cannot log out...')
+        res.json("Nope, you cannot log out...");
       } else {
-        res.json('Goodbye, see you next time!')
+        res.json("Goodbye, see you next time!");
       }
-    })
+    });
   } else {
     res.end();
   }
-})
+});
 
 function restricted(req, res, next) {
   if (req.session && req.session.user) {
