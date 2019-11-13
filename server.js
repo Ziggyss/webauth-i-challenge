@@ -1,13 +1,38 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const helmet = require("helmet");
+const cors = require("cors");
+const session = require("express-session");
+const KnexSessionStore = require("connect-session-knex")(session);
+const RestrictedRouter = require("./routers/restrictedRouter");
+
 const server = express();
 const Users = require("./users/user-model");
 
-server.use(express.json());
+const sessionConfig = {
+  name: "amazingCookieName",
+  secret: "this is the bit I am supposed to put into .env",
+  cookie: {
+    maxAge: 1000 * 60 * 45,
+    secure: false,
+    httpOnly: false
+  },
+  resave: false,
+  saveUninitialized: false,
+  store: new KnexSessionStore({
+    knex: require("./database/db-config"),
+    tablename: "sessions",
+    sidfieldname: "sid",
+    createtable: true,
+    clearInterval: 1000 * 60 * 45
+  })
+};
 
-server.get("/", (req, res) => {
-  res.json("It's working!");
-});
+server.use(helmet());
+server.use(express.json());
+server.use(cors());
+server.use(session(sessionConfig));
+server.use("/api/restricted", RestrictedRouter);
 
 server.get("/api/users", restricted, (req, res) => {
   Users.find()
@@ -46,9 +71,10 @@ server.post("/api/login", (req, res) => {
     .first()
     .then(user => {
       if (user && bcrypt.compareSync(password, user.password)) {
+        req.session.user = user;
         res.status(200).json({ message: `Welcome ${user.username}!` });
       } else {
-        res.status(401).json({ message: "Invalid credentials: " });
+        res.status(401).json({ message: "Invalid credentials" });
       }
     })
     .catch(error => {
@@ -58,20 +84,26 @@ server.post("/api/login", (req, res) => {
     });
 });
 
-function restricted(req, res, next) {
-  const { username, password } = req.headers;
-  Users.findBy({ username })
-    .first()
-    .then(user => {
-      if (user && bcrypt.compareSync(password, user.password)) {
-        next();
+server.get("/api/logout", (req, res) => {
+  if (req.session) {
+    req.session.destroy(err => {
+      if (err) {
+        res.json("Nope, you cannot log out...");
       } else {
-        res.status(401).json({ message: "You shall not pass!" });
+        res.json("Goodbye, see you next time!");
       }
-    })
-    .catch(err => {
-      res.status(500).json({ message: err.message });
     });
+  } else {
+    res.end();
+  }
+});
+
+function restricted(req, res, next) {
+  if (req.session && req.session.user) {
+    next();
+  } else {
+    res.status(400).json({ message: "You shall not pass!" });
+  }
 }
 
 module.exports = server;
